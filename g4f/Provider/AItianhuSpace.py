@@ -29,7 +29,7 @@ class AItianhuSpace(AsyncGeneratorProvider):
     ) -> AsyncResult:
         if not model:
             model = "gpt-3.5-turbo"
-        elif not model in domains:
+        elif model not in domains:
             raise ValueError(f"Model are not supported: {model}")
         if not domain:
             chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
@@ -37,15 +37,15 @@ class AItianhuSpace(AsyncGeneratorProvider):
             domain = f"{rand}.{domains[model]}"
         if not cookies:
             cookies = get_cookies(domain)
-        
+
         url = f'https://{domain}'
         async with StreamSession(
-            proxies={"https": proxy},
-            cookies=cookies,
-            timeout=timeout,
-            impersonate="chrome110",
-            verify=False
-        ) as session:
+                proxies={"https": proxy},
+                cookies=cookies,
+                timeout=timeout,
+                impersonate="chrome110",
+                verify=False
+            ) as session:
             data = {
                 "prompt": format_prompt(messages),
                 "options": {},
@@ -69,8 +69,9 @@ class AItianhuSpace(AsyncGeneratorProvider):
                         raise RuntimeError("Platform's Risk Control")
                     line = json.loads(line)
                     if "detail" in line:
-                        content = line["detail"]["choices"][0]["delta"].get("content")
-                        if content:
+                        if content := line["detail"]["choices"][0]["delta"].get(
+                            "content"
+                        ):
                             yield content
                     elif "message" in line and "AI-4接口非常昂贵" in line["message"]:
                         raise RuntimeError("Rate limit for GPT 4 reached")

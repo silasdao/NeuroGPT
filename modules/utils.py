@@ -34,9 +34,7 @@ if TYPE_CHECKING:
         data: List[List[str | int | bool]]
 
 def predict(current_model, *args):
-    iter = current_model.predict(*args)
-    for i in iter:
-        yield i
+    yield from current_model.predict(*args)
 
 def billing_info(current_model):
     return current_model.billing_info()
@@ -57,9 +55,7 @@ def reset(current_model, *args):
     return current_model.reset(*args)
 
 def retry(current_model, *args):
-    iter = current_model.retry(*args)
-    for i in iter:
-        yield i
+    yield from current_model.retry(*args)
 
 def delete_first_conversation(current_model, *args):
     return current_model.delete_first_conversation(*args)
@@ -131,8 +127,7 @@ def dislike(current_model, *args):
 def count_token(message):
     encoding = tiktoken.get_encoding("cl100k_base")
     input_str = f"role: {message['role']}, content: {message['content']}"
-    length = len(encoding.encode(input_str))
-    return length
+    return len(encoding.encode(input_str))
 
 
 def markdown_to_html_with_syntax_highlight(md_str): # deprecated
@@ -211,25 +206,24 @@ def convert_bot_before_marked(chat_message):
     """
     if '<div class="md-message">' in chat_message:
         return chat_message
-    else:
-        code_block_pattern = re.compile(r"```(.*?)(?:```|$)", re.DOTALL)
-        code_blocks = code_block_pattern.findall(chat_message)
-        non_code_parts = code_block_pattern.split(chat_message)[::2]
-        result = []
+    code_block_pattern = re.compile(r"```(.*?)(?:```|$)", re.DOTALL)
+    code_blocks = code_block_pattern.findall(chat_message)
+    non_code_parts = code_block_pattern.split(chat_message)[::2]
+    result = []
 
-        hr_pattern = r'\n\n<hr class="append-display no-in-raw" />(.*?)'
-        hr_match = re.search(hr_pattern, chat_message, re.DOTALL)
-        clip_hr = chat_message[:hr_match.start()] if hr_match else chat_message
-        raw = f'<div class="raw-message hideM">{escape_markdown(clip_hr)}</div>'
-        for non_code, code in zip(non_code_parts, code_blocks + [""]):
-            if non_code.strip():
-                result.append(non_code)
-            if code.strip():
-                code = f"\n```{code}\n```"
-                result.append(code)
-        result = "".join(result)
-        md = f'<div class="md-message">{result}\n</div>'
-        return raw + md
+    hr_pattern = r'\n\n<hr class="append-display no-in-raw" />(.*?)'
+    hr_match = re.search(hr_pattern, chat_message, re.DOTALL)
+    clip_hr = chat_message[:hr_match.start()] if hr_match else chat_message
+    raw = f'<div class="raw-message hideM">{escape_markdown(clip_hr)}</div>'
+    for non_code, code in zip(non_code_parts, code_blocks + [""]):
+        if non_code.strip():
+            result.append(non_code)
+        if code.strip():
+            code = f"\n```{code}\n```"
+            result.append(code)
+    result = "".join(result)
+    md = f'<div class="md-message">{result}\n</div>'
+    return raw + md
 
 def convert_user_before_marked(chat_message):
     if '<div class="user-message">' in chat_message:
@@ -275,19 +269,13 @@ def convert_asis(userinput): # deprecated
 
 def detect_converted_mark(userinput): # deprecated
     try:
-        if userinput.endswith(ALREADY_CONVERTED_MARK):
-            return True
-        else:
-            return False
+        return bool(userinput.endswith(ALREADY_CONVERTED_MARK))
     except:
         return True
 
 
 def detect_language(code): # deprecated
-    if code.startswith("\n"):
-        first_line = ""
-    else:
-        first_line = code.strip().split("\n", 1)[0]
+    first_line = "" if code.startswith("\n") else code.strip().split("\n", 1)[0]
     language = first_line.lower() if first_line else ""
     code_without_language = code[len(first_line) :].lstrip() if first_line else code
     return language, code_without_language
@@ -345,10 +333,7 @@ def get_file_names(dir, plain=False, filetypes=[".json"]):
     if files == []:
         files = [""]
     logging.debug(f"Файлы: {files}")
-    if plain:
-        return files
-    else:
-        return gr.Dropdown.update(choices=files)
+    return files if plain else gr.Dropdown.update(choices=files)
 
 
 def get_history_names(plain=False, user_name=""):
@@ -428,11 +413,10 @@ def hide_middle_chars(s):
         return ""
     if len(s) <= 8:
         return s
-    else:
-        head = s[:4]
-        tail = s[-4:]
-        hidden = "*" * (len(s) - 8)
-        return head + hidden + tail
+    head = s[:4]
+    tail = s[-4:]
+    hidden = "*" * (len(s) - 8)
+    return head + hidden + tail
 
 
 def submit_key(key):
@@ -443,7 +427,7 @@ def submit_key(key):
 
 
 def replace_today(prompt):
-    today = datetime.datetime.today().strftime("%Y-%m-%d")
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
     return prompt.replace("{current_date}", today)
 
 
@@ -454,20 +438,20 @@ def get_geoip():
         data = response.json()
     except:
         data = {"error": True, "reason": "Не удалось подключиться к ipapi"}
-    if "error" in data.keys():
+    if "error" in data:
         logging.warning(f"Не удалось получить информацию об IP-адресе.\n{data}")
         if data["reason"] == "RateLimited":
             return (
                 "Ваша IP-зона: неизвестна."
             )
         else:
-            return "Не удалось получить географическое положение IP-адреса. Причина: " + f"{data['reason']}" + ". Вы все равно можете использовать функцию чата."
+            return f"Не удалось получить географическое положение IP-адреса. Причина: {data['reason']}. Вы все равно можете использовать функцию чата."
     else:
         country = data["country_name"]
         if country == "China":
             text = "**Ваша IP-зона: Китай. Пожалуйста, проверьте настройки прокси, использование API в неподдерживаемых регионах может привести к блокировке учетной записи.**"
         else:
-            text = "Ваша IP-зона: " + f"{country}."
+            text = f"Ваша IP-зона: {country}."
         logging.info(text)
         return text
 
@@ -544,12 +528,10 @@ def commit_html():
         commit_hash = run(f"{git} rev-parse HEAD").strip()
     except Exception:
         commit_hash = "<неизвестно>"
-    if commit_hash != "<неизвестно>":
-        short_commit = commit_hash[0:7]
-        commit_info = f'<a style="text-decoration:none;color:inherit" href="https://github.com/GaiZhenbiao/ChuanhuChatGPT/commit/{short_commit}">{short_commit}</a>'
-    else:
-        commit_info = "неизвестно \U0001F615"
-    return commit_info
+    if commit_hash == "<неизвестно>":
+        return "неизвестно \U0001F615"
+    short_commit = commit_hash[:7]
+    return f'<a style="text-decoration:none;color:inherit" href="https://github.com/GaiZhenbiao/ChuanhuChatGPT/commit/{short_commit}">{short_commit}</a>'
 
 def tag_html():
     git = os.environ.get('GIT', "git")
@@ -557,11 +539,11 @@ def tag_html():
         tag = run(f"{git} describe --tags --exact-match").strip()
     except Exception:
         tag = "<none>"
-    if tag != "<none>":
-        tag_info = f'<a style="text-decoration:none;color:inherit" href="https://github.com/GaiZhenbiao/ChuanhuChatGPT/releases/tag/{tag}">{tag}</a>'
-    else:
-        tag_info = "unknown \U0001F615"
-    return tag_info
+    return (
+        f'<a style="text-decoration:none;color:inherit" href="https://github.com/GaiZhenbiao/ChuanhuChatGPT/releases/tag/{tag}">{tag}</a>'
+        if tag != "<none>"
+        else "unknown \U0001F615"
+    )
 
 def repo_html():
     commit_version = commit_html()
@@ -569,7 +551,7 @@ def repo_html():
     return tag_version if tag_version != "unknown \U0001F615" else commit_version
 
 def versions_html():
-    python_version = ".".join([str(x) for x in sys.version_info[0:3]])
+    python_version = ".".join([str(x) for x in sys.version_info[:3]])
     repo_version = repo_html()
     return f"""
         Python: <span title="{sys.version}">{python_version}</span>
@@ -602,7 +584,7 @@ def add_source_numbers(lst, source_name = "Source", use_source = True):
 
 def add_details(lst):
     nodes = []
-    for index, txt in enumerate(lst):
+    for txt in lst:
         brief = txt[:25].replace("\n", "")
         nodes.append(
             f"<details><summary>{brief}...</summary><p>{txt}</p></details>"
@@ -613,11 +595,8 @@ def add_details(lst):
 def sheet_to_string(sheet, sheet_name = None):
     result = []
     for index, row in sheet.iterrows():
-        row_string = ""
-        for column in sheet.columns:
-            row_string += f"{column}: {row[column]}, "
-        row_string = row_string.rstrip(", ")
-        row_string += "."
+        row_string = "".join(f"{column}: {row[column]}, " for column in sheet.columns)
+        row_string = row_string.rstrip(", ") + "."
         result.append(row_string)
     return result
 
@@ -658,8 +637,7 @@ def toggle_like_btn_visibility(selected_model_name):
         return gr.update(visible=False)
 
 def new_auto_history_filename(dirname):
-    latest_file = get_latest_filepath(dirname)
-    if latest_file:
+    if latest_file := get_latest_filepath(dirname):
         with open(os.path.join(dirname, latest_file), 'r', encoding="utf-8") as f:
             if len(f.read()) == 0:
                 return latest_file

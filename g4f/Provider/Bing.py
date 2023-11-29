@@ -49,9 +49,10 @@ class Bing(AsyncGeneratorProvider):
         return stream_generate(prompt, tone, context, proxy, cookies)
 
 def create_context(messages: Messages):
-    context = "".join(f"[{message['role']}](#message)\n{message['content']}\n\n" for message in messages)
-
-    return context
+    return "".join(
+        f"[{message['role']}](#message)\n{message['content']}\n\n"
+        for message in messages
+    )
 
 class Conversation():
     def __init__(self, conversationId: str, clientId: str, conversationSignature: str) -> None:
@@ -244,19 +245,14 @@ async def stream_generate(
         cookies: dict = None
     ):
     async with ClientSession(
-        timeout=ClientTimeout(total=900),
-        cookies=cookies,
-        headers=Defaults.headers,
-    ) as session:
+            timeout=ClientTimeout(total=900),
+            cookies=cookies,
+            headers=Defaults.headers,
+        ) as session:
         conversation = await create_conversation(session, proxy)
         try:
-            async with session.ws_connect(
-                f'wss://sydney.bing.com/sydney/ChatHub',
-                autoping=False,
-                params={'sec_access_token': conversation.conversationSignature},
-                proxy=proxy
-            ) as wss:
-                
+            async with session.ws_connect('wss://sydney.bing.com/sydney/ChatHub', autoping=False, params={'sec_access_token': conversation.conversationSignature}, proxy=proxy) as wss:
+
                 await wss.send_str(format_message({'protocol': 'json', 'version': 1}))
                 await wss.receive(timeout=900)
                 await wss.send_str(create_message(conversation, prompt, tone, context))
@@ -271,7 +267,7 @@ async def stream_generate(
                     for obj in objects:
                         if obj is None or not obj:
                             continue
-                        
+
                         response = json.loads(obj)
                         if response.get('type') == 1 and response['arguments'][0].get('messages'):
                             message = response['arguments'][0]['messages'][0]

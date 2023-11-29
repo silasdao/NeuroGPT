@@ -118,12 +118,11 @@ class ModelType(Enum):
         model_type = None
         model_name_lower = model_name.lower()
         if "gpt" in model_name_lower:
-            model_type = ModelType.OpenAI
+            return ModelType.OpenAI
         elif "agent" in model_name_lower:
-            model_type = ModelType.ChuanhuAgent
+            return ModelType.ChuanhuAgent
         else:
-            model_type = ModelType.Unknown
-        return model_type
+            return ModelType.Unknown
 
 
 class BaseLLMModel:
@@ -310,8 +309,7 @@ class BaseLLMModel:
             search_results = []
             with DDGS() as ddgs:
                 ddgs_gen = ddgs.text(real_inputs, backend="lite")
-                for r in islice(ddgs_gen, 10):
-                    search_results.append(r)
+                search_results.extend(iter(islice(ddgs_gen, 10)))
             reference_results = []
             for idx, result in enumerate(search_results):
                 logging.debug(f"Результат поиска {idx + 1}: {result}")
@@ -344,16 +342,18 @@ class BaseLLMModel:
         reply_language="Русский",
         should_check_token_count=True,
     ): 
-    
+
         if inputs.strip().startswith("!"):
             response_text = self.handle_message(inputs)
             chatbot.append((inputs, response_text))
             return chatbot, "Command handled"
 
-        status_text = "Отправка запроса ..."
         logging.info(
-             "Ввод пользователя" + f"{self.user_identifier}" + " : " + colorama.Fore.BLUE + f"{inputs}" + colorama.Style.RESET_ALL
+            f"Ввод пользователя{self.user_identifier} : {colorama.Fore.BLUE}"
+            + f"{inputs}"
+            + colorama.Style.RESET_ALL
         )
+        status_text = "Отправка запроса ..."
         if should_check_token_count:
             yield chatbot + [(inputs, "")], status_text
         if reply_language == "Следуйте языку вопросов (нестабильно)":
@@ -392,14 +392,12 @@ class BaseLLMModel:
         try:
             if stream:
                 logging.debug("Использование потоковой передачи")
-                iter = self.stream_next_chatbot(
+                yield from self.stream_next_chatbot(
                     inputs,
                     chatbot,
                     fake_input=fake_inputs,
                     display_append=display_append,
                 )
-                for chatbot, status_text in iter:
-                    yield chatbot, status_text
             else:
                 logging.debug("Не использовать потоковую передачу")
                 chatbot, status_text = self.next_chatbot_at_once(
@@ -411,12 +409,11 @@ class BaseLLMModel:
                 yield chatbot, status_text
         except Exception as e:
             traceback.print_exc()
-            yield chatbot, "Ошибка: " + str(e)
+            yield (chatbot, f"Ошибка: {str(e)}")
 
         if len(self.history) > 1 and self.history[-1]["content"] != inputs:
             logging.info(
-                "Ответ: "
-                + colorama.Fore.BLUE
+                f"Ответ: {colorama.Fore.BLUE}"
                 + f"{self.history[-1]['content']}"
                 + colorama.Style.RESET_ALL
             )
@@ -461,7 +458,7 @@ class BaseLLMModel:
             yield chatbot, f"{STANDARD_ERROR_MSG}Контекст пустой"
             return
 
-        iter = self.predict(
+        yield from self.predict(
             inputs,
             chatbot,
             stream=stream,
@@ -469,8 +466,6 @@ class BaseLLMModel:
             files=files,
             reply_language=reply_language,
         )
-        for x in iter:
-            yield x
         logging.debug("Повторная попытка завершена")
 
     # def reduce_token_size(self, chatbot):
@@ -541,7 +536,7 @@ class BaseLLMModel:
 
     def set_key(self, new_access_key):
         self.api_key = new_access_key.strip()
-        msg = "API-ключ изменен на " + hide_middle_chars(self.api_key)
+        msg = f"API-ключ изменен на {hide_middle_chars(self.api_key)}"
         logging.info(msg)
         return self.api_key, msg
 
@@ -581,10 +576,11 @@ class BaseLLMModel:
     def token_message(self, token_lst=None):
         if token_lst is None:
             token_lst = self.all_token_counts
-        token_sum = 0
-        for i in range(len(token_lst)):
-            token_sum += sum(token_lst[: i + 1])
-        return "Количество токенов: " + f"{sum(token_lst)}" + " Текущий диалог использовал " + f"{token_sum} токенов"
+        token_sum = sum(sum(token_lst[: i + 1]) for i in range(len(token_lst)))
+        return (
+            f"Количество токенов: {sum(token_lst)} Текущий диалог использовал "
+            + f"{token_sum} токенов"
+        )
 
     def save_chat_history(self, filename, chatbot, user_name):
         if filename == "":
@@ -653,7 +649,7 @@ class BaseLLMModel:
             return "История чата успешно удалена", get_history_names(False, user_name), []
         except:
             logging.info(f"Не удалось удалить историю чата {history_file_path}")
-            return "История чата " + filename + " была удалена", gr.update(), gr.update()
+            return f"История чата {filename} была удалена", gr.update(), gr.update()
 
     def auto_load(self):
         if self.user_identifier == "":

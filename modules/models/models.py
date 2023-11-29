@@ -110,49 +110,47 @@ class OpenAIClient(BaseLLMModel):
 
     def _get_api_url(self):
         if "naga-gpt" in self.model_name or "naga-llama" in self.model_name or "naga-claude" in self.model_name: 
-            url = "https://api.naga.ac/v1/chat/completions"
+            return "https://api.naga.ac/v1/chat/completions"
         elif "naga-text" in self.model_name:
-            url = "https://api.naga.ac/v1/completions"
+            return "https://api.naga.ac/v1/completions"
         elif "chatty" in self.model_name:
-            url = "https://chattyapi.tech/v1/chat/completions"
+            return "https://chattyapi.tech/v1/chat/completions"
         elif "daku" in self.model_name:
-            url = "https://api.daku.tech/v1/chat/completions"
+            return "https://api.daku.tech/v1/chat/completions"
         elif self.model_name.startswith('gpt-4') or self.model_name.startswith('gpt-4-'):
-            url = "https://neuroapi.host/gpt4/v1/chat/completions"
+            return "https://neuroapi.host/gpt4/v1/chat/completions"
         else:
-            url = "https://neuroapi.host/v1/chat/completions"
-        return url
+            return "https://neuroapi.host/v1/chat/completions"
       
     def _get_headers(self):
         if self.model_name == "purgpt":
             purgpt_api_key = self.configuration_json["purgpt_api_key"]
-            headers = {
+            return {
                 'Content-Type': 'application/json',
                 'Authorization': f'Bearer {purgpt_api_key or self.api_key}',
             }
         elif "chatty" in self.model_name:
             chatty_api_key = self.configuration_json["chatty_api_key"]
-            headers = {
+            return {
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {chatty_api_key or self.api_key}",
             }
         elif "daku" in self.model_name:
             daku_api_key = self.configuration_json["daku_api_key"]
-            headers = {
+            return {
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {daku_api_key or self.api_key}",
             }
         else:
-            headers = {
+            return {
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.api_key}",
             }
-        return headers
          
     def _get_history(self):
         system_prompt = self.system_prompt
         history = self.history
-        logging.debug(colorama.Fore.YELLOW + f"{history}" + colorama.Fore.RESET)
+        logging.debug(f"{colorama.Fore.YELLOW}{history}{colorama.Fore.RESET}")
         if system_prompt is not None:
             history = [construct_system(system_prompt), *history]
         return history
@@ -169,7 +167,6 @@ class OpenAIClient(BaseLLMModel):
                 "prompt": last_text,
                 "stream": stream,
             }
-            return payload
         else:
             payload = {
                 "model": model,
@@ -189,13 +186,11 @@ class OpenAIClient(BaseLLMModel):
                 payload["logit_bias"] = self.logit_bias
             if self.user_identifier:
                 payload["user"] = self.user_identifier
-            return payload
+
+        return payload
 
     def _make_request(self, headers, payload, stream):
-        if stream:
-            timeout = TIMEOUT_STREAMING
-        else:
-            timeout = TIMEOUT_ALL
+        timeout = TIMEOUT_STREAMING if stream else TIMEOUT_ALL
         try: #Заготовочка для переписания системы отправки запросов
             if any(substring in self.model_name for substring in ["purgpt", "naga", "chatty"]):
                 response = requests.post(
@@ -230,8 +225,7 @@ class OpenAIClient(BaseLLMModel):
                 timeout=TIMEOUT_ALL,
             )
         if response.status_code == 200:
-            data = response.json()
-            return data
+            return response.json()
         else:
             raise Exception(f"API request failed with status code {response.status_code}: {response.text}")
 
@@ -263,7 +257,7 @@ class OpenAIClient(BaseLLMModel):
             elif "one_api_error" in error_msg:
                 yield '<span style="color: red;">Провайдер API ответил ошибкой:</span> Сервер Chatty API недоступен. Попробуйте позднее.'
             else:
-                yield '<span style="color: red;">Ошибка:</span> ' + error_msg
+                yield f'<span style="color: red;">Ошибка:</span> {error_msg}'
 
     def set_key(self, new_access_key):
         ret = super().set_key(new_access_key)
@@ -279,10 +273,8 @@ def get_model(
     system_prompt=None,
     user_name=""
 ) -> BaseLLMModel:
-    msg = "Модель установлена на: " + f" {model_name}"
+    msg = f"Модель установлена на:  {model_name}"
     model_type = ModelType.get_type(model_name)
-    lora_selector_visibility = False
-    lora_choices = []
     dont_change_lora_selector = False
     if model_type != ModelType.OpenAI:
         config.local_embedding = True
@@ -321,8 +313,9 @@ def get_model(
         msg = f"{STANDARD_ERROR_MSG}: {e}"
     if dont_change_lora_selector:
         return model, msg, chatbot
-    else:
-        return model, msg, chatbot, gr.Dropdown.update(choices=lora_choices, visible=lora_selector_visibility)
+    lora_selector_visibility = False
+    lora_choices = []
+    return model, msg, chatbot, gr.Dropdown.update(choices=lora_choices, visible=lora_selector_visibility)
 
 
 if __name__ == "__main__":
@@ -335,22 +328,22 @@ if __name__ == "__main__":
     chatbot = []
     stream = False
     # 测试账单功能
-    logging.info(colorama.Back.GREEN + "测试账单功能" + colorama.Back.RESET)
+    logging.info(f"{colorama.Back.GREEN}测试账单功能{colorama.Back.RESET}")
     logging.info(client.billing_info())
     # 测试问答
-    logging.info(colorama.Back.GREEN + "测试问答" + colorama.Back.RESET)
+    logging.info(f"{colorama.Back.GREEN}测试问答{colorama.Back.RESET}")
     question = "巴黎是中国的首都吗？"
     for i in client.predict(inputs=question, chatbot=chatbot, stream=stream):
         logging.info(i)
     logging.info(f"测试问答后history : {client.history}")
     # 测试记忆力
-    logging.info(colorama.Back.GREEN + "测试记忆力" + colorama.Back.RESET)
+    logging.info(f"{colorama.Back.GREEN}测试记忆力{colorama.Back.RESET}")
     question = "我刚刚问了你什么问题？"
     for i in client.predict(inputs=question, chatbot=chatbot, stream=stream):
         logging.info(i)
     logging.info(f"测试记忆力后history : {client.history}")
     # 测试重试功能
-    logging.info(colorama.Back.GREEN + "测试重试功能" + colorama.Back.RESET)
+    logging.info(f"{colorama.Back.GREEN}测试重试功能{colorama.Back.RESET}")
     for i in client.retry(chatbot=chatbot, stream=stream):
         logging.info(i)
     logging.info(f"重试后history : {client.history}")

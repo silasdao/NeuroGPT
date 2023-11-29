@@ -54,16 +54,15 @@ def get_cookies(cookie_domain: str) -> Dict[str, str]:
 
 
 def format_prompt(messages: Messages, add_special_tokens=False) -> str:
-    if add_special_tokens or len(messages) > 1:
-        formatted = "\n".join(
-            [
-                "%s: %s" % ((message["role"]).capitalize(), message["content"])
-                for message in messages
-            ]
-        )
-        return f"{formatted}\nAssistant:"
-    else:
+    if not add_special_tokens and len(messages) <= 1:
         return messages[0]["content"]
+    formatted = "\n".join(
+        [
+            f'{message["role"].capitalize()}: {message["content"]}'
+            for message in messages
+        ]
+    )
+    return f"{formatted}\nAssistant:"
 
 
 def get_browser(user_data_dir: str = None):

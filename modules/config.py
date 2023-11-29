@@ -76,9 +76,7 @@ my_api_key = os.environ.get("OPENAI_API_KEY", my_api_key)
 
 usage_limit = os.environ.get("USAGE_LIMIT", config.get("usage_limit", 120))
 
-## 多账户机制
-multi_api_key = config.get("multi_api_key", False) # 是否开启多账户机制
-if multi_api_key:
+if multi_api_key := config.get("multi_api_key", False):
     api_key_list = config.get("api_key_list", [])
     if len(api_key_list) == 0:
         logging.error("多账号模式已开启，但api_key_list为空，请检查config.json")
@@ -150,20 +148,7 @@ def retrieve_proxy(proxy=None):
 
 ## 处理latex options
 user_latex_option = config.get("latex_option", "default")
-if user_latex_option == "default":
-    latex_delimiters_set = [
-        {"left": "$$", "right": "$$", "display": True},
-        {"left": "$", "right": "$", "display": False},
-        {"left": "\\(", "right": "\\)", "display": False},
-        {"left": "\\[", "right": "\\]", "display": True},
-    ]
-elif user_latex_option == "strict":
-    latex_delimiters_set = [
-        {"left": "$$", "right": "$$", "display": True},
-        {"left": "\\(", "right": "\\)", "display": False},
-        {"left": "\\[", "right": "\\]", "display": True},
-    ]
-elif user_latex_option == "all":
+if user_latex_option == "all":
     latex_delimiters_set = [
         {"left": "$$", "right": "$$", "display": True},
         {"left": "$", "right": "$", "display": False},
@@ -177,6 +162,12 @@ elif user_latex_option == "all":
     ]
 elif user_latex_option == "disabled":
     latex_delimiters_set = []
+elif user_latex_option == "strict":
+    latex_delimiters_set = [
+        {"left": "$$", "right": "$$", "display": True},
+        {"left": "\\(", "right": "\\)", "display": False},
+        {"left": "\\[", "right": "\\]", "display": True},
+    ]
 else:
     latex_delimiters_set = [
         {"left": "$$", "right": "$$", "display": True},
@@ -198,10 +189,7 @@ def update_doc_config(two_column_pdf):
 server_name = config.get("server_name", None)
 server_port = config.get("server_port", None)
 if server_name is None:
-    if dockerflag:
-        server_name = "0.0.0.0"
-    else:
-        server_name = "127.0.0.1"
+    server_name = "0.0.0.0" if dockerflag else "127.0.0.1"
 if server_port is None:
     if dockerflag:
         server_port = 7860

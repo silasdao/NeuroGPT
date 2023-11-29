@@ -40,8 +40,7 @@ app.add_middleware(
 )
 
 def get_proxy():
-    proxy = FreeProxy(rand=True, timeout=1).get()
-    return proxy
+    return FreeProxy(rand=True, timeout=1).get()
 
 
 @app.post("/chat/completions")

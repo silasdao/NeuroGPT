@@ -102,12 +102,10 @@ class ChuanhuAgent_Client(BaseLLMModel):
         results = []
         with DDGS() as ddgs:
             ddgs_gen = ddgs.text("notes from a dead house", backend="api")
-            for r in islice(ddgs_gen, 10):
-                results.append({
-                    "title": r["title"],
-                    "link": r["href"],
-                    "snippet": r["body"]
-                })
+            results.extend(
+                {"title": r["title"], "link": r["href"], "snippet": r["body"]}
+                for r in islice(ddgs_gen, 10)
+            )
         return str(results)
 
     def handle_file_upload(self, files, chatbot, language):
@@ -182,9 +180,7 @@ class ChuanhuAgent_Client(BaseLLMModel):
         if text == "":
             return "URL unavailable."
         text_summary = self.summary(text)
-        url_content = "webpage content summary:\n" + text_summary
-
-        return url_content
+        return "webpage content summary:\n" + text_summary
 
     def ask_url(self, url, question):
         text = self.fetch_url_content(url)

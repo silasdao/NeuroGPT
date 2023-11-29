@@ -40,20 +40,17 @@ class ChatgptAi(AsyncProvider):
             "user-agent"         : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
         }
         async with ClientSession(
-            headers=headers
-        ) as session:
+                headers=headers
+            ) as session:
             if not cls._nonce:
                 async with session.get(cls.url, proxy=proxy) as response:
                     response.raise_for_status()
                     text = await response.text()
-                result = re.search(r'data-nonce="(.*?)"', text)
-                if result:
+                if result := re.search(r'data-nonce="(.*?)"', text):
                     cls._nonce = result.group(1)
-                result = re.search(r'data-post-id="(.*?)"', text)
-                if result:
+                if result := re.search(r'data-post-id="(.*?)"', text):
                     cls._post_id = result.group(1)
-                result = re.search(r'data-bot-id="(.*?)"', text)
-                if result:
+                if result := re.search(r'data-bot-id="(.*?)"', text):
                     cls._bot_id = result.group(1)
                 if not cls._nonce or not cls._post_id or not cls._bot_id:
                     raise RuntimeError("Nonce, post-id or bot-id not found")

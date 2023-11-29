@@ -70,9 +70,10 @@ def get_documents(file_src):
             elif file_type == ".xlsx":
                 logging.debug("Loading Excel...")
                 text_list = excel_to_string(filepath)
-                texts = []
-                for elem in text_list:
-                    texts.append(Document(page_content=elem, metadata={"source": filepath}))
+                texts = [
+                    Document(page_content=elem, metadata={"source": filepath})
+                    for elem in text_list
+                ]
             else:
                 logging.debug("Loading text file...")
                 from langchain.document_loaders import TextLoader
@@ -102,11 +103,7 @@ def construct_index(
     from langchain.chat_models import ChatOpenAI
     from langchain.vectorstores import FAISS
 
-    if api_key:
-        os.environ["OPENAI_API_KEY"] = api_key
-    else:
-        # 由于一个依赖的愚蠢的设计，这里必须要有一个API KEY
-        os.environ["OPENAI_API_KEY"] = "sk-xxxxxxx"
+    os.environ["OPENAI_API_KEY"] = api_key if api_key else "sk-xxxxxxx"
     chunk_size_limit = None if chunk_size_limit == 0 else chunk_size_limit
     embedding_limit = None if embedding_limit == 0 else embedding_limit
     separator = " " if separator == "" else separator

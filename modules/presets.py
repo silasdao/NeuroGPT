@@ -43,7 +43,7 @@ CONCURRENT_COUNT = 500 # Количество пользователей, кот
 SIM_K = 5
 INDEX_QUERY_TEMPRATURE = 1.0
 
-CHUANHU_TITLE = "NeuroGPT " + VERSION
+CHUANHU_TITLE = f"NeuroGPT {VERSION}"
 
 CHUANHU_DESCRIPTION = "[ℹ️ Телеграм канал проекта](https://t.me/neurogen_news) <br /> [💰 Поддержать автора](https://boosty.to/neurogen) </br>"
 
@@ -134,8 +134,8 @@ MODEL_TOKEN_LIMIT = {
     'daku-llama-2-70b': 4096,
 }
 
-TOKEN_OFFSET = 1000 
-DEFAULT_TOKEN_LIMIT = 4096 
+TOKEN_OFFSET = 1000
+DEFAULT_TOKEN_LIMIT = 4096
 REDUCE_TOKEN_FACTOR = 0.5
 
 REPLY_LANGUAGES = [

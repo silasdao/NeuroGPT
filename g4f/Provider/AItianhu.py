@@ -39,13 +39,13 @@ class AItianhu(AsyncGeneratorProvider):
             "Referer": f"{cls.url}/"
         }
         async with StreamSession(
-            headers=headers,
-            cookies=cookies,
-            timeout=timeout,
-            proxies={"https": proxy},
-            impersonate="chrome107",
-            verify=False
-        ) as session:
+                headers=headers,
+                cookies=cookies,
+                timeout=timeout,
+                proxies={"https": proxy},
+                impersonate="chrome107",
+                verify=False
+            ) as session:
             async with session.post(f"{cls.url}/api/chat-process", json=data) as response:
                 response.raise_for_status()
                 async for line in response.iter_lines():
@@ -54,12 +54,12 @@ class AItianhu(AsyncGeneratorProvider):
                     if b"platform's risk control" in line:
                         raise RuntimeError("Platform's Risk Control")
                     line = json.loads(line)
-                    if "detail" in line:
-                        content = line["detail"]["choices"][0]["delta"].get("content")
-                        if content:
-                            yield content
-                    else:
+                    if "detail" not in line:
                         raise RuntimeError(f"Response: {line}")
+                    if content := line["detail"]["choices"][0]["delta"].get(
+                        "content"
+                    ):
+                        yield content
 
 
     @classmethod

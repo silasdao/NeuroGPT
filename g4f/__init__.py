@@ -74,7 +74,7 @@ class ChatCompletion:
         stream  : bool = False, **kwargs) -> str:
         
         if stream:
-            raise ValueError(f'"create_async" does not support "stream" argument')
+            raise ValueError('"create_async" does not support "stream" argument')
 
         model, provider = get_model_and_provider(model, provider, False)
 

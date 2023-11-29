@@ -45,8 +45,7 @@ class GptGod(AsyncGeneratorProvider):
                     if line.startswith(b'event: '):
                         event = line[7:-1]
                     elif event == b"data" and line.startswith(b"data: "):
-                        data = json.loads(line[6:-1])
-                        if data:
+                        if data := json.loads(line[6:-1]):
                             yield data
                     elif event == b"done":
                         break

@@ -41,16 +41,13 @@ class NeuroGPT(AsyncGeneratorProvider):
             else:
                 yield response.choices[0]['message'].get("content", "")
         except openai.error.APIError as e:
-            if e.http_status == 429:
-                detail_pattern = re.compile(r'{"detail":"(.*?)"}')
-                match = detail_pattern.search(e.user_message)
-                if match:
-                    error_message = match.group(1)
-                    yield error_message
-                else:
-                    yield e.user_message
-            else:
+            if e.http_status != 429:
                 raise
+            detail_pattern = re.compile(r'{"detail":"(.*?)"}')
+            if match := detail_pattern.search(e.user_message):
+                yield match.group(1)
+            else:
+                yield e.user_message
 
     @classmethod
     @property
